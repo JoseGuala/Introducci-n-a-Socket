@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <title>Xat</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+</head>
+<body>
+
+  
+  <div class="container my-4">
+    <div class="col-md-6 mx-auto">
+
+      
+      
+      <form id="formEntrada" class="card card-body">
+        <div class="input-group">
+          <input type="text" id="nom" class="form-control" maxlength="20" placeholder="Introdueix el teu nom">
+          <div class="input-group-append">
+            <button class="btn btn-success">Entrar</button>
+          </div>
+        </div>
+        <p id="error" class="text-danger mt-2 mb-0"></p>
+      </form>
+
+     
+      <div id="xat" class="card d-none">
+        <div id="capcalera" class="card-header bg-success text-white">
+          <h2 class="h4">Xat general</h2>
+          <div>Nom: <b id="nomMostrat"></b></div>
+          <div>Estat: <span id="estat" class="badge badge-danger">Desconnectat</span></div>
+      </div>
+
+      
+        <div id="missatges" class="card-body overflow-auto" style="height: 300px;"></div>
+
+       
+        <form id="formXat" class="card-footer">
+          <div class="input-group">
+            <input type="text" id="text" class="form-control" maxlength="500" placeholder="Escriu un missatge..." autocomplete="off">
+            <div class="input-group-append">
+              <button id="enviar" class="btn btn-success">Enviar</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let nom = ''; 
+    const formEntrada = document.getElementById('formEntrada');
+    const inputNom = document.getElementById('nom');
+    const error = document.getElementById('error');
+    const xat = document.getElementById('xat');
+    const nomMostrat = document.getElementById('nomMostrat');
+    const estat = document.getElementById('estat');
+    const missatges = document.getElementById('missatges');
+    const formXat = document.getElementById('formXat');
+    const inputText = document.getElementById('text');
+    const botoEnviar = document.getElementById('enviar');
+
+    formEntrada.addEventListener('submit', (e) => {
+      e.preventDefault(); 
+
+      const nomEscrit = inputNom.value.trim(); 
+      if (nomEscrit === '' ) {
+        error.textContent = 'El nom no pot estar buit .';
+        return;
+      }
+
+      nom = nomEscrit;
+      nomMostrat.textContent = nom;       
+      formEntrada.classList.add('d-none');  
+      xat.classList.remove('d-none');       
+      actualitzarEstat();
+    });
+
+  
+    function actualitzarEstat() {
+      if (socket.connected) {
+        estat.textContent = 'Connectat';
+        estat.className = 'badge badge-success';  
+        botoEnviar.disabled = false;
+      } else {
+        estat.textContent = 'Desconnectat';
+        estat.className = 'badge badge-danger';
+        botoEnviar.disabled = true; 
+      }
+    }
+
+    socket.on('connect', actualitzarEstat);
+    socket.on('disconnect', actualitzarEstat);
+
+
+    formXat.addEventListener('submit', (e) => {
+      e.preventDefault();
+
+      const text = inputText.value.trim();
+    
+      if (nom === '' || text === '' || !socket.connected) return;
+
+      socket.emit('chat:send', { nom, text });
+      inputText.value = ''; 
+    });
+
+   
+    socket.on('chat:message', (msg) => {
+      const div = document.createElement('div');
+      div.className = 'mb-2';                
+      const emissor = document.createElement('b');
+      emissor.textContent = msg.nom;           
+
+      const hora = document.createElement('span');
+      hora.className = 'text-muted small';     
+      hora.textContent = ' ' + msg.hora;
+
+      const text = document.createElement('div');
+      text.textContent = msg.text;
+
+      div.append(emissor, hora, text);
+      missatges.appendChild(div);
+
+      missatges.scrollTop = missatges.scrollHeight; 
+    });
+
+    actualitzarEstat(); 
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+</body>
+</html>
